@@ -13,7 +13,7 @@ services:
     networks:
       - medusa_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-medusa}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-medusa}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -47,6 +47,7 @@ services:
   medusa:
     build:
       context: ./backend
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:
@@ -79,6 +80,7 @@ services:
   storefront:
     build:
       context: ./storefront
+      dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_MEDUSA_BACKEND_URL: ${NEXT_PUBLIC_MEDUSA_BACKEND_URL:-http://localhost:9000}
     restart: unless-stopped

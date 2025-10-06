@@ -1,31 +1,24 @@
-# Place this file at: backend/Dockerfile
+# This file should be at: backend/Dockerfile
 FROM node:20-alpine AS base
-
-# Install build dependencies
 RUN corepack enable && corepack prepare pnpm@latest --activate && \
     apk add --no-cache libc6-compat python3 make g++
 
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
-COPY pnpm-lock.yaml* ./
-
-# Install all dependencies
+COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile || pnpm install
 
-# Copy source code
+# Copy source and build
 COPY . .
-
-# Build
-RUN pnpm build || pnpm run build
+RUN pnpm build
 
 # Install production dependencies
-RUN pnpm install --frozen-lockfile --prod || pnpm install --prod
+RUN rm -rf node_modules && \
+    pnpm install --frozen-lockfile --prod || pnpm install --prod
 
 # Production image
 FROM node:20-alpine
-
 RUN corepack enable && corepack prepare pnpm@latest --activate && \
     apk add --no-cache wget libc6-compat
 

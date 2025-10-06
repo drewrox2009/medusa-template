@@ -1,50 +1,39 @@
-# Storefront Dockerfile
+# This file should be at: storefront/Dockerfile
 FROM node:20-alpine AS base
-
-# Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Install dependencies
-FROM base AS dependencies
+# Dependencies
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY storefront/package*.json storefront/pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile
+COPY package.json pnpm-lock.yaml* ./
+RUN pnpm install --frozen-lockfile || pnpm install
 
-# Build stage
-FROM base AS build
+# Builder
+FROM base AS builder
 WORKDIR /app
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY storefront/ ./
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 
-# Set build-time environment variables
-ARG NEXT_PUBLIC_MEDUSA_BACKEND_URL=https://store.eww-peww.com
-ENV NEXT_PUBLIC_MEDUSA_BACKEND_URL=${NEXT_PUBLIC_MEDUSA_BACKEND_URL}
+ARG NEXT_PUBLIC_MEDUSA_BACKEND_URL
+ENV NEXT_PUBLIC_MEDUSA_BACKEND_URL=$NEXT_PUBLIC_MEDUSA_BACKEND_URL
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build Next.js application
 RUN pnpm build
 
-# Production stage
-FROM node:20-alpine AS production
-
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
+# Runner
+FROM base AS runner
 WORKDIR /app
-
-# Copy necessary files from build stage
-COPY --from=build /app/package*.json ./
-COPY --from=build /app/pnpm-lock.yaml* ./
-COPY --from=build /app/next.config.js ./
-COPY --from=build /app/public ./public
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/node_modules ./node_modules
-
-# Set environment to production
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 
-# Expose port
+COPY --from=builder /app/next.config.js* ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+
 EXPOSE 3000
 
-# Start Next.js
 CMD ["pnpm", "start"]
