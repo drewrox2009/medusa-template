@@ -29,9 +29,9 @@ ENV DATABASE_URL=$DATABASE_URL \
     REDIS_URL=$REDIS_URL \
     MEDUSA_TELEMETRY_DISABLED=1
 
-# Install dependencies (use lockfile when present)
+# Install dependencies (regenerate lockfile if needed for new dependencies)
 COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
 
 # Copy source and build Medusa (.medusa/server)
 COPY . .
@@ -55,6 +55,8 @@ COPY --from=base /app/node_modules ./node_modules
 COPY --from=base /app/.medusa/server ./.medusa/server
 COPY --from=base /app/package*.json ./
 COPY --from=base /app/medusa-config* ./
+COPY --from=base /app/startup-with-key.js ./
+COPY --from=base /app/create-publishable-key.js ./
 
 ENV NODE_ENV=production
 EXPOSE 9000
