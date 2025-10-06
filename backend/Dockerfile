@@ -62,5 +62,6 @@ EXPOSE 9000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD wget --spider -q http://localhost:9000/health || exit 1
 
-# Start the server (migrations handled by Medusa tooling during start)
-CMD ["pnpm", "start"]
+# Start the server with automatic publishable key generation
+# Use standard start if you don't want auto-key creation: CMD ["pnpm", "start"]
+CMD ["pnpm", "start:with-key"]
