@@ -1,0 +1,36 @@
+# Exclude unnecessary files from Docker build context
+
+# Node modules and caches
+node_modules
+**/node_modules
+.pnpm-store
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist
+build
+coverage
+.next
+
+# Medusa local build artifacts (created inside image during build anyway)
+.medusa
+.medusa/server
+.medusa/server/node_modules
+
+# VCS and editor files
+.git
+.gitignore
+.vscode
+.idea
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env files (runtime will receive envs from the platform)
+.env
+.env.*
+.dockerignore
