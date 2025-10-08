@@ -15,15 +15,14 @@ COPY package*.json ./
 COPY pnpm-lock.yaml* ./
 COPY yarn.lock* ./
 
-# Install dependencies (production only)
-RUN npm install
+# Install dependencies using yarn (matching the project's packageManager)
+RUN yarn install --frozen-lockfile
 
 # Copy the rest of your storefront source code into the build context
 COPY . .
 
-# Build the production Next.js application.  This assumes your package.json
-# defines a `build` script that runs `next build` under the hood.
-RUN npm run build
+# Build the production Next.js application using yarn
+RUN yarn build
 
 # Stage 2: create the runtime image
 FROM node:20-alpine
@@ -38,6 +37,5 @@ EXPOSE 3000
 # Copy built application from the builder stage
 COPY --from=builder /app .
 
-# Start the Next.js server.  This uses the default `next start` script
-# provided by the Next.js starter template.
-CMD ["npm", "run", "start"]
+# Start the Next.js server using yarn
+CMD ["yarn", "start"]

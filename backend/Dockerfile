@@ -22,9 +22,8 @@ COPY package*.json ./
 COPY pnpm-lock.yaml* ./
 COPY yarn.lock* ./
 
-# Install dependencies with npm in production mode.  You can switch
-# to `yarn install --frozen-lockfile` if you use Yarn.
-RUN npm install --production
+# Install dependencies with yarn in production mode since project uses Yarn
+RUN yarn install --production --frozen-lockfile
 
 # Stage 2: build the application
 FROM node:20-alpine AS builder
@@ -41,10 +40,8 @@ COPY . .
 # Set environment to production during build
 ENV NODE_ENV=production
 
-# If your Medusa backend requires a build step (e.g. TypeScript)
-# ensure a `build` script exists in package.json.  The build
-# typically outputs compiled files into `.medusa/server`.
-RUN if [ -f package.json ] && grep -q '"build"' package.json; then npm run build; fi
+# Build the Medusa backend using yarn
+RUN yarn build
 
 # Stage 3: create final runtime image
 FROM node:20-alpine
@@ -64,12 +61,5 @@ COPY --from=builder /server .
 # Default environment
 ENV NODE_ENV=production
 
-# Start Medusa application.  If you built the project this will run the
-# compiled server from `.medusa/server`.  Otherwise it falls back to
-# running from source.
-#
-# You can adjust this command to your needs.  For example, if you
-# include migrations or need to run `npx medusa migrations run` or
-# `npm run predeploy` before starting, create a wrapper script and
-# adjust the CMD accordingly.
-CMD ["npm", "run", "start"]
+# Start Medusa application using yarn
+CMD ["yarn", "start"]
