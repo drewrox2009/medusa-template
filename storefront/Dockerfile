@@ -1,61 +1,43 @@
-# This file should be at: storefront/Dockerfile
-# Multi-stage build for Next.js storefront
+##
+# Storefront Dockerfile
+#
+# This Dockerfile builds a production image for your Next.js storefront.  It
+# installs dependencies, builds the application and runs it using the default
+# `next start` script.  The final image exposes port 3000.
 
-# -----------------------------
-# Base (Node + pnpm)
-# -----------------------------
-# Use Node 22 for parity and future-proofing
-FROM node:22-alpine AS base
-RUN apk add --no-cache libc6-compat && corepack enable && corepack prepare pnpm@9.10.0 --activate
+# Stage 1: install dependencies and build
+FROM node:20-alpine AS builder
 
-# -----------------------------
-# Dependencies
-# -----------------------------
-FROM base AS deps
 WORKDIR /app
-COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile || pnpm install
 
-# -----------------------------
-# Builder
-# -----------------------------
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copy dependency descriptors.  This pattern works for npm, pnpm or yarn.
+COPY package*.json ./
+COPY pnpm-lock.yaml* ./
+COPY yarn.lock* ./
+
+# Install dependencies (production only)
+RUN npm install
+
+# Copy the rest of your storefront source code into the build context
 COPY . .
 
-ARG NEXT_PUBLIC_MEDUSA_BACKEND_URL=https://localhost:9000
-ARG NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=dummy
-ARG NEXT_PUBLIC_BASE_URL=https://localhost:3000
-ARG NEXT_PUBLIC_MINIO_ENDPOINT=
-ENV NEXT_PUBLIC_MEDUSA_BACKEND_URL=$NEXT_PUBLIC_MEDUSA_BACKEND_URL
-ENV NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=$NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
-ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
-ENV NEXT_PUBLIC_MINIO_ENDPOINT=$NEXT_PUBLIC_MINIO_ENDPOINT
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
-ENV SKIP_AWAIT_BACKEND=1
-ENV SKIP_ENV_VALIDATION=1
+# Build the production Next.js application.  This assumes your package.json
+# defines a `build` script that runs `next build` under the hood.
+RUN npm run build
 
-RUN pnpm build:next
+# Stage 2: create the runtime image
+FROM node:20-alpine
 
-# -----------------------------
-# Runner
-# -----------------------------
-FROM base AS runner
 WORKDIR /app
+
 ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV SKIP_AWAIT_BACKEND=1
-ENV PORT=3000
 
-# Only copy what is required to run
-COPY --from=builder /app/next.config.js* ./
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-
+# Expose the default Next.js port
 EXPOSE 3000
 
-CMD ["pnpm", "start"]
+# Copy built application from the builder stage
+COPY --from=builder /app .
+
+# Start the Next.js server.  This uses the default `next start` script
+# provided by the Next.js starter template.
+CMD ["npm", "run", "start"]

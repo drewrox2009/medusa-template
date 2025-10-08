@@ -1,104 +1,54 @@
-<p align="center">
-  <a href="https://www.medusajs.com">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/59018053/229103275-b5e482bb-4601-46e6-8142-244f531cebdb.svg">
-      <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/59018053/229103726-e5b529a3-9b3f-4970-8a1f-c6af37f087bf.svg">
-      <img alt="Medusa logo" src="https://user-images.githubusercontent.com/59018053/229103726-e5b529a3-9b3f-4970-8a1f-c6af37f087bf.svg" width=100>
-    </picture>
-  </a>
-  <a href="https://railway.app/template/gkU-27?referralCode=-Yg50p">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://railway.app/brand/logo-light.svg">
-      <source media="(prefers-color-scheme: light)" srcset="https://railway.app/brand/logo-dark.svg">
-      <img alt="Railway logo" src="https://railway.app/brand/logo-light.svg" width=100>
-    </picture>
-  </a>
-</p>
+# Medusa Template (Backend & Storefront)
 
-<h2 align="center">
-  Prebaked medusajs 2.0 monorepo
-</h2>
-<h4 align="center">
-  Backend + Storefront + postgres + redis + MinIO + MeiliSearch
-</h4>
+This repository contains a minimal skeleton for deploying a Medusa v2 backend and a Next.js storefront.  It is designed to be deployed on platforms like **Coolify** using **Dockerfiles** rather than a single `docker‑compose.yml`.  You will need to provide your own PostgreSQL, Redis and Minio services; those are not bundled here.
 
-<h2 align="center">
-  <a href="https://railway.app/template/gkU-27?referralCode=-Yg50p">one-click deploy on railway!</a>
-</h2>
+## Structure
 
-<h1 align="center">
-  Need help?<br>
-  <a href="https://funkyton.com/medusajs-2-0-is-finally-here/">Step by step deploy guide, and video instructions</a>
-</h1>
+```
+medusa-template/
+├── backend/            # Medusa server (API + Admin)
+│   ├── Dockerfile      # Dockerfile for the Medusa server
+│   ├── .env.example    # Example environment variables for the backend
+│   └── medusa-config.ts # Medusa configuration with sensible defaults
+└── storefront/         # Next.js storefront
+    ├── Dockerfile      # Dockerfile for the storefront
+    └── .env.local.example # Example env for the storefront
+```
 
-<p align="center">
-Combine Medusa's modules for your commerce backend with the newest Next.js 14 features for a performant storefront.</p>
+## Getting started
 
-## About this boilerplate
-This boilerplate is a monorepo consisting of the officially released MedusaJS 2.0 backend and storefront application. It is a pre-configured, ready-to-deploy solution, modified for seamless deployment on [railway.app](https://railway.app?referralCode=-Yg50p).
+1. **Populate the backend folder with your Medusa backend code.**  You can generate a new project with [`create-medusa-app`](https://docs.medusajs.com/resources/create-medusa-app) or copy your existing backend into `backend/`.  Make sure that the `package.json` and lock file live in the `backend` folder.
 
-Updated: to `version 2.10.2` 🥳
+2. **Populate the storefront folder with your Next.js storefront code.**  Medusa provides a [Next.js starter](https://github.com/medusajs/nextjs-starter-medusa) you can clone directly into `storefront/`.  Again, your `package.json` and lock file should live in that folder.
 
-## Preconfigured 3rd party integrations
+3. **Copy the example environment files** and fill in your secrets and connection URLs:
 
-- MinIO file storage: Replaces local file storage with MinIO cloud storage, automatically creating a 'medusa-media' bucket for your media files. [README](backend/src/modules/minio-file/README.md)
-- Resend email integration [Watch setup video](https://youtu.be/pbdZm26YDpE?si=LQTHWeZMLD4w3Ahw) - special thanks to [aleciavogel](https://github.com/aleciavogel) for Resend notification service, and react-email implementation! [README](backend/src/modules/email-notifications/README.md)
-- Stripe payment service: [Watch setup video](https://youtu.be/dcSOpIzc1Og)
-- Meilisearch integration by [Rokmohar](https://github.com/rokmohar/medusa-plugin-meilisearch): Adds powerful product search capabilities to your store. When deployed on Railway using the template, MeiliSearch is automatically configured. (For non-railway'ers: [Watch setup video](https://youtu.be/hrXcc5MjApI))
+   ```sh
+   cp backend/.env.example backend/.env
+   cp storefront/.env.local.example storefront/.env.local
+   ```
 
-# Backend
+   Update the placeholders as appropriate (database URLs, redis URL, Minio credentials, etc.).  See the comments in each file for guidance.
 
-### local setup
-Video instructions: https://youtu.be/PPxenu7IjGM
+4. **Build and run the images.**  Both folders include a `Dockerfile` that installs dependencies, builds your application and exposes the proper port.  When deploying with Coolify you can point it at the root of this repository and it will build both images separately.
 
-- `cd backend/`
-- `pnpm install` or `npm i`
-- Rename `.env.template` ->  `.env`
-- To connect to your online database from your local machine, copy the `DATABASE_URL` value auto-generated on Railway and add it to your `.env` file.
-  - If connecting to a new database, for example a local one, run `pnpm ib` or `npm run ib` to seed the database.
-- `pnpm dev` or `npm run dev`
+5. **Configure your DNS:**
 
-### requirements
-- **postgres database** (Automatic setup when using the Railway template)
-- **redis** (Automatic setup when using the Railway template) - fallback to simulated redis.
-- **MinIO storage** (Automatic setup when using the Railway template) - fallback to local storage.
-- **Meilisearch** (Automatic setup when using the Railway template)
+   * **Storefront** — point `store.eww‑pew.com` to your storefront container (port `3000` by default).
+   * **Admin panel and API** — point `admin.eww‑pew.com` to your backend container.  The Medusa admin dashboard is served under the `/app` path (e.g. `https://admin.eww‑pew.com/app`).  The REST API is served under `/` (e.g. `https://admin.eww‑pew.com/store/products`).
 
-### commands
+## Environment variables
 
-`cd backend/`
-`npm run ib` or `pnpm ib` will initialize the backend by running migrations and seed the database with required system data.
-`npm run dev` or `pnpm dev` will start the backend (and admin dashboard frontend on `localhost:9000/app`) in development mode.
-`pnpm build && pnpm start` will compile the project and run from compiled source. This can be useful for reproducing issues on your cloud instance.
+When deploying a Medusa application you need to provide a few critical environment variables.  The [General Deployment Guide](https://docs.medusajs.com/learn/deployment/general#content) highlights that you should set secrets for cookies and JWTs as well as CORS and database URLs【611812571810596†L446-L477】.  Additionally, if you enable the [Minio file service plugin](https://docs.medusajs.com/v1/plugins/file-service/minio) you need to provide `MINIO_ENDPOINT`, `MINIO_BUCKET`, `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`【335184576063223†L171-L180】.
 
-# Storefront
+Refer to the example env files in each folder for the full set of variables required.
 
-### local setup
-Video instructions: https://youtu.be/PPxenu7IjGM
+## Notes
 
-- `cd storefront/
-- Install dependencies `npm i` or `pnpm i`
-- Rename `.env.local.template` ->  `.env.local`
+* This repository intentionally **does not include** Docker Compose.  You must supply your own PostgreSQL, Redis and Minio services.  Ensure those services are reachable from your containers and that the connection strings in your `.env` files are correct.
+* The Medusa server is configured in `backend/medusa-config.ts` to disable database SSL by default and to read its backend URL from `MEDUSA_BACKEND_URL`.  Feel free to adjust this file to suit your requirements.
+* The Next.js storefront reads `NEXT_PUBLIC_MEDUSA_BACKEND_URL` from its environment to determine where to fetch data from.
 
-### requirements
-- A running backend on port 9000 is required to fetch product data and other information needed to build Next.js pages.
+---
 
-### commands
-`cd storefront/`
-`npm run dev` or `pnpm dev` will run the storefront on uncompiled code, with hot-reloading as files are saved with changes.
-
-## Useful resources
-- How to setup credit card payment with Stripe payment module: https://youtu.be/dcSOpIzc1Og
-- https://funkyton.com/medusajs-2-0-is-finally-here/#succuessfully-deployed-whats-next
-  
-<p align="center">
-  <a href="https://funkyton.com/">
-    <div style="text-align: center;">
-      A template by,
-      <br>
-      <picture>
-        <img alt="FUNKYTON logo" src="https://res-5.cloudinary.com/hczpmiapo/image/upload/q_auto/v1/ghost-blog-images/funkyton-logo.png" width=200>
-      </picture>
-    </div>
-  </a>
-</p>
+For more details on Medusa deployment, consult the [official documentation](https://docs.medusajs.com/learn/deployment/general#content).

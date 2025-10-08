@@ -1,69 +1,75 @@
-# This file should be at: backend/Dockerfile
+##
+# Medusa backend Dockerfile
+#
+# This Dockerfile builds and runs a MedusaJS backend (API + admin) in a
+# production ready container.  It assumes that your backend source code lives
+# alongside this file and that your `package.json` defines suitable `build` and
+# `start` scripts.  The container exposes port 9000 by default.
 
-# -----------------------------
-# Builder / Base
-# -----------------------------
-# Use Node 22 to match package.json "engines"
-FROM node:22-alpine AS base
-# Enable pnpm (match lockfile version) and install build deps for native modules
-RUN corepack enable && corepack prepare pnpm@9.10.0 --activate && \
-    apk add --no-cache libc6-compat python3 make g++
+# Stage 1: install dependencies
+FROM node:20-alpine AS deps
 
-WORKDIR /app
+# Install build tools needed for native modules and Medusa CLI
+RUN apk add --no-cache python3 make g++ bash
 
-# Provide safe defaults so "pnpm build" (medusa build) doesn't fail at build-time
-# These are only used during image build; real values will be provided at runtime.
-ARG DATABASE_URL="postgres://medusa:medusa@localhost:5432/medusa"
-ARG JWT_SECRET="changeme"
-ARG COOKIE_SECRET="changeme"
-ARG BACKEND_PUBLIC_URL="http://localhost:9000"
-ARG ADMIN_CORS="http://localhost:7000,http://localhost:9000"
-ARG STORE_CORS="http://localhost:8000"
-ARG REDIS_URL=""
-ENV DATABASE_URL=$DATABASE_URL \
-    JWT_SECRET=$JWT_SECRET \
-    COOKIE_SECRET=$COOKIE_SECRET \
-    BACKEND_PUBLIC_URL=$BACKEND_PUBLIC_URL \
-    ADMIN_CORS=$ADMIN_CORS \
-    STORE_CORS=$STORE_CORS \
-    REDIS_URL=$REDIS_URL \
-    MEDUSA_TELEMETRY_DISABLED=1
+# Set working directory
+WORKDIR /server
 
-# Install dependencies (regenerate lockfile if needed for new dependencies)
-COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
+# Copy dependency descriptors.  The `COPY` patterns use globs so that
+# either `package-lock.json`, `pnpm-lock.yaml` or `yarn.lock` will be
+# included if present.  Adjust as needed for your chosen package manager.
+COPY package*.json ./
+COPY pnpm-lock.yaml* ./
+COPY yarn.lock* ./
 
-# Copy source and build Medusa (.medusa/server)
+# Install dependencies with npm in production mode.  You can switch
+# to `yarn install --frozen-lockfile` if you use Yarn.
+RUN npm install --production
+
+# Stage 2: build the application
+FROM node:20-alpine AS builder
+
+RUN apk add --no-cache python3 make g++ bash
+WORKDIR /server
+
+# Copy installed node_modules from deps stage
+COPY --from=deps /server/node_modules ./node_modules
+
+# Copy the application source
 COPY . .
-RUN pnpm build
 
-# Install production deps at the repo root (for init-backend, etc.)
-RUN rm -rf node_modules && \
-    pnpm install --frozen-lockfile --prod || pnpm install --prod
-
-# -----------------------------
-# Production Runtime
-# -----------------------------
-FROM node:22-alpine
-RUN corepack enable && corepack prepare pnpm@9.10.0 --activate && \
-    apk add --no-cache wget libc6-compat
-
-WORKDIR /app
-
-# Copy from builder
-COPY --from=base /app/node_modules ./node_modules
-COPY --from=base /app/.medusa/server ./.medusa/server
-COPY --from=base /app/package*.json ./
-COPY --from=base /app/medusa-config* ./
-COPY --from=base /app/startup-with-key.js ./
-COPY --from=base /app/create-publishable-key.js ./
-
+# Set environment to production during build
 ENV NODE_ENV=production
+
+# If your Medusa backend requires a build step (e.g. TypeScript)
+# ensure a `build` script exists in package.json.  The build
+# typically outputs compiled files into `.medusa/server`.
+RUN if [ -f package.json ] && grep -q '"build"' package.json; then npm run build; fi
+
+# Stage 3: create final runtime image
+FROM node:20-alpine
+
+# Expose Medusa server port
 EXPOSE 9000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD wget --spider -q http://localhost:9000/health || exit 1
+# Set working directory
+WORKDIR /server
 
-# Start the server with automatic publishable key generation
-# Use standard start if you don't want auto-key creation: CMD ["pnpm", "start"]
-CMD ["pnpm", "start:with-key"]
+# Install runtime dependencies required for Medusa CLI commands
+RUN apk add --no-cache bash
+
+# Copy built application and node_modules from builder
+COPY --from=builder /server .
+
+# Default environment
+ENV NODE_ENV=production
+
+# Start Medusa application.  If you built the project this will run the
+# compiled server from `.medusa/server`.  Otherwise it falls back to
+# running from source.
+#
+# You can adjust this command to your needs.  For example, if you
+# include migrations or need to run `npx medusa migrations run` or
+# `npm run predeploy` before starting, create a wrapper script and
+# adjust the CMD accordingly.
+CMD ["npm", "run", "start"]
