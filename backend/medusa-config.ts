@@ -49,19 +49,19 @@ export default defineConfig({
    * guide【335184576063223†L171-L180】.  Comment out or remove this block if
    * you don’t need Minio.
    */
-  plugins: [
-    {
-      resolve: "medusa-file-minio",
-      options: {
-        endpoint: process.env.MINIO_ENDPOINT,
-        bucket: process.env.MINIO_BUCKET,
-        access_key_id: process.env.MINIO_ACCESS_KEY,
-        secret_access_key: process.env.MINIO_SECRET_KEY,
-        private_bucket: process.env.MINIO_PRIVATE_BUCKET,
-        private_access_key_id: process.env.MINIO_PRIVATE_ACCESS_KEY,
-        private_secret_access_key: process.env.MINIO_PRIVATE_SECRET_KEY,
-      },
-    },
-    // Add other plugins (Stripe, Search, etc.) as needed.
-  ],
+  // plugins: [
+  //   {
+  //     resolve: "medusa-file-minio",
+  //     options: {
+  //       endpoint: process.env.MINIO_ENDPOINT,
+  //       bucket: process.env.MINIO_BUCKET,
+  //       access_key_id: process.env.MINIO_ACCESS_KEY,
+  //       secret_access_key: process.env.MINIO_SECRET_KEY,
+  //       private_bucket: process.env.MINIO_PRIVATE_BUCKET,
+  //       private_access_key_id: process.env.MINIO_PRIVATE_ACCESS_KEY,
+  //       private_secret_access_key: process.env.MINIO_PRIVATE_SECRET_KEY,
+  //     },
+  //   },
+  //   // Add other plugins (Stripe, Search, etc.) as needed.
+  // ],
 })
